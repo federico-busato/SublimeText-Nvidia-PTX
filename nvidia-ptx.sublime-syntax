@@ -1,0 +1,419 @@
+%YAML 1.2
+---
+name: PTX
+file_extensions: [ptx]
+scope: source.ptx
+
+variables:
+  rnd: (rn|rz|rm|rp)
+  integer: (u16|u32|u64|s16|s32|s64)
+  types1: (b16|b32|b64|u16|u32|u64|s16|s32|s64|f32|f64)
+  types2: (u8|u16|u32|u64|s8|s16|s32|s64|f16|f32|f64)
+  types3: (b8|b16|b32|b64|u8|u16|u32|u64|s8|s16|s32|s64|f32|f64)
+  types4: (u8|u16|u32|u64|s8|s16|s32|s64|f16|f32|f64)
+  cmp: (eq|ne|lt|gt|ge|lo|ls|hi|hs|equ|neu|ltu|leu|gtu|geu|num|nan)
+
+contexts:
+  prototype:
+    - include: comments
+
+  main:
+    - include: operations
+    - include: memory_op
+    - include: tex_op
+    - include: surface_op
+    - include: control_op
+    - include: sync_op
+    - include: video_op
+    - include: miscellaneous_op
+    - include: special_reg
+    - include: predicate
+    - include: number
+    - include: label
+    - include: special_keyword
+
+  operations:
+    - include: integer_op
+    - include: floatingpoint_op
+    - include: comparison_op
+    - include: logic_op
+    - include: movement_op
+    - include: wmma_op
+
+  integer_op:
+    #---------------------------------------------------------------------------
+    - match: \b(add|sub)(\.sat\.s32|\.{{integer}})\b
+      scope: storage.type
+
+    - match: \b((add|sub)(c)?|mad(c)?(\.lo|\.hi)?)\.cc\.(s32|u32|s64|u64)\b
+      scope: storage.type
+
+    - match: \b(mad|mul)(\.hi|\.lo|\.wide)?\.{{integer}}\b
+      scope: storage.type
+
+    - match: \b(mad|mad24)\.hi\.sat\.s32\b
+      scope: storage.type
+
+    - match: \b(mad|mul|add|sub)({{rnd}})?(\.ftz)?(\.sat)?\b
+      scope: storage.type
+
+    - match: \b(mul24|mad24)(\.hi|\.lo)?\.(u32|s32)\b
+      scope: storage.type
+    #---------------------------------------------------------------------------
+    - match: \b(sad|div|rem|min|max)\.{{integer}}\b
+      scope: storage.type
+
+    - match: \b(abs|neg)\.s(16|32|64)\b
+      scope: storage.type
+
+    - match: \b(popc|clz|brev|bfi)\.b(32|64)|fns\.b32\b
+      scope: storage.type
+
+    - match: \b(bfind(\.shiftamt)?|bfe)\.(u32|u64|s32|s64)\b
+      scope: storage.type
+
+    - match: \b(dp2a(\.hi|\.lo)?|dp4a)\.(s32\.s32|u32\.u32)\b
+      scope: storage.type
+
+  floatingpoint_op:
+    - match: \b(add|sub|mul|mad)(\.{{rnd}})?(\.ftz)?(\.sat)?\.f32\b
+      scope: storage.type
+
+    - match: \b(add|sub|mul)(\.{{rnd}})?\.f64\b
+      scope: storage.type
+
+    - match: \btestp\.(finite|infinite|number|notanumber|normal|subnormal)\.f(32|64)\b
+      scope: storage.type
+
+    - match: \bfma\.{{rnd}}(\.ftz)?(\.sat)?\.f32\b
+      scope: storage.type
+
+    - match: \b(fma|mad|div|rcp|sqrt)\.{{rnd}}\.f64\b
+      scope: storage.type
+
+    - match: \bdiv\.(approx|full|{{rnd}})(\.ftz)?\.f32\b
+      scope: storage.type
+
+    - match: \b(abs|neg|min|max)((\.ftz)?\.f32|\.f64)\b
+      scope: storage.type
+
+    - match: \b(rcp|sqrt)(\.approx)?\.{{rnd}}(\.ftz)?\.f32\b
+      scope: storage.type
+
+    - match: \brsqrt\.approx(\.ftz)?\.f32\b
+      scope: storage.type
+
+    - match: \b(rcp|rsqrt)\.approx\.ftz\.f64\b
+      scope: storage.type
+
+    - match: \b(copysign\.f(32|64)|(sin|cons|lg2|ex2)\.approx(\.ftz)?\.f32)\b
+      scope: storage.type
+
+  fp16_op:
+    - match: \b(add|sub|mul)(\.rn)?(\.ftz)?(\.sat)?\.f16(x2)?\b
+      scope: storage.type
+
+    - match: \bfma(\.rn)?(\.ftz)?(\.sat)?\.f16(x2)?\b
+      scope: storage.type
+
+    - match: \bneg(\.ftz)?\.f16(x2)?\b
+      scope: storage.type
+
+  comparison_op:
+    - match: \bset\.{{cmp}}(and|or|xor)?(\.ftz)?\.(u32|f32|s32|f16)\.{{types1}}\b
+      scope: storage.type
+
+    - match: \bset\.{{cmp}}(and|or|xor)?(\.ftz)?\.fp16x2\.fp16x2\b
+      scope: storage.type
+
+    - match: \bsetp\.{{cmp}}(and|or|xor)?(\.ftz)?\.({{types1}}|fp16|fp16x2)\b
+      scope: storage.type
+
+    - match: \bselp\.{{types1}}\b
+      scope: storage.type
+
+    - match: \bslct\.{{types1}}\.s32\b
+      scope: storage.type
+
+    - match: \bslct(\.ftz)?\.{{types1}}\.f32\b
+      scope: storage.type
+
+  logic_op:
+    - match: \b(and|or|xor|not)\.(pred|b16|b32|b64)\b
+      scope: storage.type
+
+    - match: \b(shl|cnot)\.(b16|b32|b64)\b
+      scope: storage.type
+
+    - match: \bshr\.(b|u|s)(16|32|64)\b
+      scope: storage.type
+
+    - match: \b(lop3|shf\.(l|r)\.(clamp|wrap))\.b32\b
+      scope: storage.type
+
+  movement_op:
+    - match: \bmov\.({{types1}}|u64|b16|b32|b64)\b
+      scope: storage.type
+
+    - match: \bprmt\.b32\.(f4e|b4e|rc8|ecl|ecr|rc16)\b
+      scope: storage.type
+
+    - match: \bprefetch\.(global|local)\.L(1|2)\b
+      scope: storage.type
+
+    - match: \bprefetchu\.L1\b
+      scope: storage.type
+
+    - match: \bisspacep\.(const|global|local|shared)\b
+      scope: storage.type
+
+    - match: \bcvta(\.to)?\.(const|global|local|shared)\.u(32|64)\b
+      scope: storage.type
+
+    - match: \bcvt(\.rni|\.rzi|\.rmi|\.rpi|\.rn|\.rz|\.rm|\.rp)?(\.ftz)?(\.sat)?\.{{types2}}\.{{types2}}\b
+      scope: storage.type
+
+  wmma_op:
+    - match: \bwmma\.load\.(a|b)\.sync\.aligned\.(row|col)\.(m16n16k16|m8n32k16|m32n8k16)(\.shared|\.global)?\.(f16|s8|u8)\b
+      scope: keyword.operator
+
+    - match: \bwmma\.load\.c\.sync\.aligned\.(row|col)\.(m16n16k16|m8n32k16|m32n8k16)(\.shared|\.global)?\.(f16|f32|s32)\b
+      scope: keyword.operator
+
+    - match: \bwmma\.load\.a\.sync\.aligned\.row\.m8n8k32(\.shared|\.global)?\.(s|u)4\b
+      scope: keyword.operator
+
+    - match: \bwmma\.load\.b\.sync\.aligned\.col\.m8n8k32(\.shared|\.global)?\.(s|u)4\b
+      scope: keyword.operator
+
+    - match: \bwmma\.load\.c\.sync\.aligned\.(row|col)\.m8n8k32(\.shared|\.global)?\.s32\b
+      scope: keyword.operator
+
+    - match: \bwmma\.load\.a\.sync\.aligned\.row\.m8n8k128(\.shared|\.global)?\.b1\b
+      scope: keyword.operator
+
+    - match: \bwmma\.load\.b\.sync\.aligned\.col\.m8n8k128(\.shared|\.global)?\.b1\b
+      scope: keyword.operator
+
+    - match: \bwmma\.load\.c\.sync\.aligned\.(row|col)\.m8n8k128(\.shared|\.global)?\.s32\b
+      scope: keyword.operator
+
+    - match: \bwmma\.store\.d\.sync\.aligned\.(row|col)\.(m16n16k16|m8n32k16|m32n8k16)(\.shared|\.global)?\.(f16|f32|s32)\b
+      scope: keyword.operator
+
+    - match: \bwmma\.store\.d\.sync\.aligned\.(row|col)\.(m8n8k32|m8n8k128)(\.shared|\.global)?\.s32\b
+      scope: keyword.operator
+
+    - match: \bwmma\.mma\.sync\.aligned\.(row|col)\.(row|col)\.(m16n16k16|m8n32k16|m32n8k16)\.f(16|32)\.f(16|32)(\.satfinite)?\b
+      scope: keyword.operator
+
+    - match: \bwmma\.mma\.sync\.aligned\.(row|col)\.(row|col)\.(m16n16k16|m8n32k16|m32n8k16)\.s32\.(s|u)8\.(s|u)8\.s32(\.satfinite)?\b
+      scope: keyword.operator
+
+    - match: \bwmma\.mma\.sync\.aligned\.row\.col\.m8n8k32\.s32\.(s|u)8\.(s|u)8\.s32(\.satfinite)?\b
+      scope: keyword.operator
+
+    - match: \bwmma\.mma\.xor\.popc\.sync\.aligned\.row\.col\.m8n8k128\.s32\.b1\.b1\.s32\b
+      scope: keyword.operator
+
+    - match: \bmma\.aligned\.m8n8k4\.(row|col)\.(row|col)\.f(16|32)\.f16\.f16\.f(16|32)\b
+      scope: keyword.operator
+  #-----------------------------------------------------------------------------
+
+  memory_op:
+    - match: \bld\.(relaxed|acquire)\.(cta|gpu|sys)(\.const|\.global|\.local|\.param|\.shared)?(\.v2|\.v4)?\.{{types3}}\b
+      scope: keyword.operator
+
+    - match: \bld\.volatile(\.const|\.global|\.local|\.param|\.shared)?(\.v2|\.v4)?\.{{types3}}\b
+      scope: keyword.operator
+
+    - match: \bld(\.weak)?(\.ca|\.cg|\.cs|\.lu|\.cv)?(\.const|\.global|\.local|\.param|\.shared)?(\.v2|\.v4)?\.{{types3}}\b
+      scope: keyword.operator
+
+    - match: \bld\.global(\.ca|\.cg|\.cs|\.lu|\.cv)?\.nc(\.v2|\.v4)?\.{{types3}}\b
+      scope: keyword.operator
+
+    - match: \bldu(\.global)?(\.v2|\.v4)?\.{{types3}}\b
+      scope: keyword.operator
+
+    - match: \bst\.(relaxed|release)\.scope(\.const|\.global|\.local|\.param|\.shared)?(\.v2|\.v4)?(\.cta|\.gpu|\.sys)\.{{types3}}\b
+      scope: keyword.operator
+
+    - match: \bst\.volatile(\.const|\.global|\.local|\.param|\.shared)?(\.v2|\.v4)?\.{{types3}}\b
+      scope: keyword.operator
+
+    - match: \bst(\.weak)?(\.const|\.global|\.local|\.param|\.shared)?(\.wb|\.cg|\.cs|\.wt)?(\.v2|\.v4)?\.{{types3}}\b
+      scope: keyword.operator
+
+    - match: \bprefetch(\.global|\.space)?\.(L1|L2)\b
+      scope: keyword.operator
+
+    - match: \bprefetchu\.L1\b
+      scope: keyword.operator
+
+    - match: \bisspacep\.(const|global|local|shared)\b
+      scope: keyword.operator
+
+    - match: \bctva(\.to)?\.(const|global|local|shared)\.(u32|u64)\b
+      scope: keyword.operator
+
+    - match: \bctv(\.rni|\.rzi|\.rmi|\.rpi|\.rn|\.rz|\.rm|\.rp)?(\.ftz)?(\.sat)?\.{{types4}}\.{{types4}}\b
+      scope: keyword.operator
+
+    - match: \batom(\.relaxed|\.acquire|\.release|\.acq_rel)?(\.cta|\.gpu|\.sys)?(\.global|\.shared)?\.(and|or|xor|cas|exch|add|inc|dec|min|max)\.(b32|b64|u32|u64|s32|s64|f32|f64)\b
+      scope: keyword.operator
+
+    - match: \batom(\.relaxed|\.acquire|\.release|\.acq_rel)?(\.cta|\.gpu|\.sys)?(\.global|\.shared)?(\.cas\.b16|\.add\.noftz\.f16(x2)?)\b
+      scope: keyword.operator
+
+    - match: \bred(\.relaxed|\.release)?(\.cta|\.gpu|\.sys)?(\.global|\.shared)?\.(and|or|xor|add|inc|dec|min|max)\.(b32|b64|u32|u64|s32|s64|f32|f64)\b
+      scope: keyword.operator
+
+    - match: \bred(\.relaxed|\.release)?(\.cta|\.gpu|\.sys)?(\.global|\.shared)?\.add\.noftz\.f16(x2)?\b
+      scope: keyword.operator
+
+#param[0-9]+
+#__unnamed_[0-9]+
+
+  tex_op:
+    - match: \btex(base|level|grad)?\.(1d|2d|3d|a1d|a2d|cube|acube|2dms|a2dms)(\.v4\.(u32|s32|f16|f32)|\.v2\.f16x2)\.(s|f)32\b
+      scope: keyword.operator
+
+    - match: \btld4\.(r|g|b|a)\.(2d|a2d|cube|acube)\.v4\.(s|u|f)32\.f32\b
+      scope: keyword.operator
+
+    - match: \btxq(\.level)?\.(width|height|depth|channel_data_type|channel_order|normalized_coords|array_size|num_mipmap_levels|num_samples)\.b32\b
+      scope: keyword.operator
+
+    - match: \btxq\.(force_unnormalized_coords|filter_mode|addr_mode_0|addr_mode_1|addr_mode_2)\.b32\b
+      scope: keyword.operator
+
+    - match: \bistypep\.(texref|samplerref|surfref)\b
+      scope: keyword.operator
+
+  surface_op:
+    - match: \bsuld\.b\.(1d|2d|3d|a1d|a2d)(\.ca|\.cg|\.cs|\.cv)?(\.v2|\.v4)?\.(b8|b16|b32|b64)\.(trap|clamp|zero)\b
+      scope: keyword.operator
+
+    - match: \bsust\.b\.(1d|2d|3d|a1d|a2d)(\.wb|\.cg|\.cs|\.wt)?(\.v2|\.v4)?\.(b8|b16|b32|b64)\.(trap|clamp|zero)\b
+      scope: keyword.operator
+
+    - match: \bsust\.p\.(1d|2d|3d)(\.v2|\.v4)?\.b32\.(trap|clamp|zero)\b
+      scope: keyword.operator
+
+    - match: \bsured\.(b|p)\.(add|min|max|and|or)\.(1d|2d|3d)\.(u32|u64|s32|b32)\.b32\.(trap|clamp|zero)\b
+      scope: keyword.operator
+
+    - match: \bsuq\.(width|height|depth|channel_data_type|channel_order|array_size|memory_layout)\.b32\b
+      scope: keyword.operator
+  #-----------------------------------------------------------------------------
+
+  control_op:
+    - match: \b((bra|call|ret)(\.uni)?|exit)\b
+      scope: entity.name
+
+  predicate:
+    - match: '@(!)?%p([0-9]+)?'
+      scope: entity.name
+
+    - match: '@(!)?p'
+      scope: entity.name
+
+  sync_op:
+    - match: \b(shfl(\.sync)?(\.(up|down|idx|bfly))?\.b32|vote(\.sync)?\.(ballot\.b32|any\.pred|all\.pred|uni\.pred)|match\.(all|any)(\.sync)?\.(b32|b64)|activemask(\.sync)?\.b32)\b
+      scope: variable.language
+
+    - match: \bbarrier\.(sync|arrive)(\.aligned)?\b
+      scope: variable.language
+
+    - match: \bbarrier\.red\.(popc(\.aligned)?\.u32|(and|or)(\.aligned)?\.pred)\b
+      scope: variable.language
+
+    - match: \bbar(\.sync|\.arrive|\.red\.(popc\.32|and\.pred|or\.pred))\b
+      scope: variable.language
+
+    - match: \bbar\.warp\.sync\b
+      scope: variable.language
+
+    - match: \b(membar\.(cta|gl|sys)|fence(\.sc|\.acq_rel)?\.(cta|gpu|sys))\b
+      scope: variable.language
+
+  video_op:
+    - match: \b(vadd|vsub|vabsdiff|vmin|vmax)\.(u32|s32)\.(u32|s32)\.(u32|s32)(\.sat)?\.(add|min|max)?\b
+      scope: storage.type
+
+    - match: \b(vshl|vshr)\.(u32|s32)\.(u32|s32)\.u32(\.sat)?\.(add|min|max)?\b
+      scope: storage.type
+
+    - match: \b(vmad)\.(u32|s32)\.(u32|s32)\.(u32|s32)(\.sat)?(\.po)?(\.shr7|\.shr15)?\b
+      scope: storage.type
+
+    - match: \bvset\.(u32|s32)\.(u32|s32)\.(eq|ne|lt|le|gt|ge)\.(add|min|max)?\b
+      scope: storage.type
+
+    - match: \b(vadd2|vsub2|vavrg2|vabsdiff2|vmin2|vmax2|vadd4|vsub4|vavrg4|vabsdiff4|vmin4|vmax4)\.(u32|s32)\.(u32|s32)\.(u32|s32)(\.add|(\.sat)?)\b
+      scope: storage.type
+
+    - match: \bvset(2|4)\.(u32|s32)\.(u32|s32)\.(eq|ne|lt|le|gt|ge)(\.add)?\b
+      scope: storage.type
+
+  miscellaneous_op:
+    - match: \b(brkpt|nanosleep\.u32|pmevent(\.mask)?|trap)\b
+      scope: string
+
+  special_reg:
+    - match: \b(laneid|lanemask_eq|lanemask_le|lanemask_lt|lanemask_ge|lanemask_gt)\b
+      scope: string
+
+    - match: \b(tid\.(x|y|z)|ntid\.(x|y|z)|warpid|nwarpid|ctaid\.(x|y|z)|nctaid\.(x|y|z)|smid|nsmid|gridid|clock|clock_hi|clock64|total_smem_size|dynamic_smem_size)\b
+      scope: string
+
+    - match: \bpm[0-7](_64)?\b
+      scope: string
+
+    - match: \benvreg([12]?[0-9]|30|31)\b
+      scope: string
+
+  number:
+    - match: \-[0-9]+\b|\b[0-9]+\b|0x[0-9a-f]+\b
+      scope: constant.numeric
+
+  special_keyword:
+    - match: ^\.global
+      scope: invalid.deprecated
+
+    - match: \.visible\ \.entry
+      scope: invalid.deprecated
+
+    - match: \.(weak|common|extern|version|target|address_size|maxntid|file|maxnreg|reqntid|minnctapersm|maxnctapersm|noreturn|pragma)\b
+      scope: entity.name.function
+
+    - match: \.(align|branchtargets|calltargets|callprototype|param|reg|shared)\b
+      scope: string
+
+    - match: \b__assert_fail\b
+      scope: string
+
+  label:
+    - match: \bBB[0-9]+_[0-9]+\b
+      scope: invalid
+
+    - match: \btmp[0-9]+\b
+      scope: invalid
+
+  comments:
+    - match: \.loc
+      push:
+        # This is an anonymous context push for brevity.
+        - meta_scope: comment.line.double-slash.example-c
+        - match: $\n?
+          pop: true
+      scope: punctuation.definition.comment.example-c
+
+    - match: '//'
+      scope: punctuation.definition.comment.example-c
+      push:
+        # This is an anonymous context push for brevity.
+        - meta_scope: comment.line.double-slash.example-c
+        - match: $\n?
+          pop: true
